@@ -1,0 +1,32 @@
+[
+  {
+    "name": "测试API",
+    "method": "GET",
+    "url": "https://httpbin.org/get",
+    "encoding": "utf-8",
+    "headers": {
+      "User-Agent": "HTTP-Test-Tool"
+    },
+    "params": {
+      "type": "form",
+      "data": {
+        "test": "value"
+      }
+    }
+  },
+  {
+    "name": "网络标签-Phone网络标签",
+    "method": "POST",
+    "url": "https://111.63.37.92:996/admin/system-manager/api/v1/admin/networkLabel/pagedList",
+    "encoding": "utf-8",
+    "headers": {
+      "cookie": "language=zh; WEBYMSADMIN=45cb4a1e01145064ed7db490d93eccc0e334bc788ae4f46a",
+      "Content-Type": "application/json"
+    },
+    "params": {
+      "type": "json",
+      "data": "{\n  \"skip\": 0,\n  \"limit\": 20,\n  \"orderbys\": [],\n  \"autoCount\": true,\n  \"serviceOwnership\": 1\n}"
+    },
+    "timestamp": "2025-09-12T06:11:34.234Z"
+  }
+]

@@ -177,35 +177,123 @@ app.get('/dashboard', async (req, res) => {
 
     // 生成HTML表格
     const tableHtml = `
-      <h1>管理员仪表盘</h1>
-      <h2>Cookie信息</h2>
-      <pre>${JSON.stringify(req.cookies, null, 2)}</pre>
-      
-      <h2>企业列表</h2>
-      <table border="1" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
-        <thead>
-          <tr style="background-color: #f2f2f2;">
-            <th style="padding: 12px; text-align: left;">企业号</th>
-            <th style="padding: 12px; text-align: left;">企业名称</th>
-            <th style="padding: 12px; text-align: left;">国家及地区</th>
-            <th style="padding: 12px; text-align: left;">企业管理员</th>
-            <th style="padding: 12px; text-align: left;">企业状态</th>
-            <th style="padding: 12px; text-align: left;">创建时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${enterprises.map(ent => `
-            <tr>
-              <td style="padding: 12px;">${ent.number}</td>
-              <td style="padding: 12px;">${ent.name}</td>
-              <td style="padding: 12px;">${ent.area}</td>
-              <td style="padding: 12px;">${ent.managerName}</td>
-              <td style="padding: 12px;">${ent.status}</td>
-              <td style="padding: 12px;">${ent.createTime}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <!DOCTYPE html>
+      <html lang="zh-CN">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>管理员仪表盘</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .section { margin-bottom: 30px; }
+          .iframe-container { 
+            width: 100%; 
+            height: 600px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            overflow: hidden;
+            margin-top: 20px;
+          }
+          .iframe-container iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+          }
+          .loading { 
+            text-align: center; 
+            padding: 50px; 
+            color: #666; 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="section">
+          <h1>管理员仪表盘</h1>
+          <h2>Cookie信息</h2>
+          <pre>${JSON.stringify(req.cookies, null, 2)}</pre>
+        </div>
+        
+        <div class="section">
+          <h2>企业列表</h2>
+          <table border="1" style="border-collapse: collapse; width: 100%; margin-top: 20px;">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th style="padding: 12px; text-align: left;">企业号</th>
+                <th style="padding: 12px; text-align: left;">企业名称</th>
+                <th style="padding: 12px; text-align: left;">国家及地区</th>
+                <th style="padding: 12px; text-align: left;">企业管理员</th>
+                <th style="padding: 12px; text-align: left;">企业状态</th>
+                <th style="padding: 12px; text-align: left;">创建时间</th>
+                <th style="padding: 12px; text-align: left;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${enterprises.map(ent => `
+                <tr>
+                  <td style="padding: 12px;">${ent.number}</td>
+                  <td style="padding: 12px;">${ent.name}</td>
+                  <td style="padding: 12px;">${ent.area}</td>
+                  <td style="padding: 12px;">${ent.managerName}</td>
+                  <td style="padding: 12px;">${ent.status}</td>
+                  <td style="padding: 12px;">${ent.createTime}</td>
+                  <td style="padding: 12px;">
+                    <a href="/proxy-enterprise-list" target="_blank" 
+                       style="color: #409EFF; text-decoration: none; padding: 4px 8px; border: 1px solid #409EFF; border-radius: 4px; font-size: 12px;">
+                      访问原平台
+                    </a>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section">
+          <h2>网络标签管理</h2>
+          <div class="iframe-container">
+            <iframe 
+              src="/proxy-iframe/phoneNetTagList" 
+              title="网络标签管理"
+              onload="this.style.display='block'; this.previousElementSibling.style.display='none';"
+              style="display: none;">
+            </iframe>
+            <div class="loading">正在加载网络标签管理页面...</div>
+          </div>
+        </div>
+
+        <script>
+          // 处理iframe加载错误
+          document.querySelector('iframe').onerror = function() {
+            this.style.display = 'none';
+            this.nextElementSibling.innerHTML = '加载失败，请检查网络连接或联系管理员';
+            this.nextElementSibling.style.color = '#ff0000';
+          };
+
+          // 监听iframe高度调整消息
+          window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'resize') {
+              const iframe = document.querySelector('iframe');
+              const container = document.querySelector('.iframe-container');
+              if (iframe && container && event.data.height) {
+                const newHeight = Math.max(400, Math.min(event.data.height + 50, 1000));
+                container.style.height = newHeight + 'px';
+                console.log('调整iframe高度为:', newHeight + 'px');
+              }
+            }
+          });
+
+          // iframe加载完成后的处理
+          document.querySelector('iframe').onload = function() {
+            this.style.display = 'block';
+            const loadingDiv = this.nextElementSibling;
+            if (loadingDiv) {
+              loadingDiv.style.display = 'none';
+            }
+            console.log('iframe加载完成');
+          };
+        </script>
+      </body>
+      </html>
     `;
 
     res.send(tableHtml);
@@ -222,26 +310,574 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
-// 路由：在控制台显示cookie内容
-app.get('/dashboard', (req, res) => {
-  // 仅检查WEBYMSADMIN cookie
-  if (!req.cookies.WEBYMSADMIN) {
-    return res.redirect('/login');
-  }
+// 路由：代理访问原平台企业列表
+app.get('/proxy-enterprise-list', async (req, res) => {
+  try {
+    // 读取本地保存的cookie
+    let cookieData = {};
+    if (fs.existsSync(COOKIE_STORAGE_PATH)) {
+      cookieData = JSON.parse(fs.readFileSync(COOKIE_STORAGE_PATH, 'utf8'));
+    } else {
+      // 如果没有本地cookie文件，尝试使用请求中的cookie
+      cookieData = {
+        WEBYMSADMIN: req.cookies.WEBYMSADMIN,
+        language: req.cookies.language || 'zh'
+      };
+    }
 
-  // 在控制台显示cookie内容
-  console.log('当前Cookie内容:', req.cookies);
-  res.send(`
-      <h1>管理员仪表盘</h1>
-      <p>已成功获取WEBYMSADMIN cookie</p>
-      <pre>${JSON.stringify(req.cookies, null, 2)}</pre>
-  `);
+    if (!cookieData.WEBYMSADMIN) {
+      return res.status(401).send('未找到有效的认证信息，请先登录');
+    }
+
+    // 构建cookie字符串
+    const cookieString = `WEBYMSADMIN=${cookieData.WEBYMSADMIN}; language=${cookieData.language || 'zh'}`;
+    
+    console.log('正在使用cookie代理访问原平台企业列表:', cookieString);
+    
+    // 代理访问原平台企业列表页面
+    const response = await axios.get('https://111.63.37.92:996/admin/enterprise/list', {
+      headers: {
+        'Cookie': cookieString,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
+      },
+      httpsAgent: httpsAgent
+    });
+
+    // 修改HTML内容，将所有资源路径代理到本地服务器
+     let htmlContent = response.data;
+     
+     // 首先清理可能存在的双重代理路径
+     htmlContent = htmlContent.replace(/\/proxy-static\/proxy-static\//g, '/proxy-static/');
+     
+     // 统一的路径替换逻辑，避免重复替换
+     // 使用单一的全局替换，处理所有以 / 开头且不包含 proxy-static 的路径
+     htmlContent = htmlContent.replace(/(["\'`=])\/(?!proxy-static)([^"\'`\s>]*)/g, '$1/proxy-static/$2');
+     
+     // 处理可能遗漏的相对路径（以字母开头的文件路径）
+     htmlContent = htmlContent.replace(/(["\'`])([a-zA-Z][^"\'`\s\/]*\.(js|css|json|png|jpg|gif|svg|ico|woff|woff2|ttf|eot|html))(?![^"\'`]*proxy-static)/g, '$1/proxy-static/$2');
+     
+     // 最后再次清理可能产生的双重代理路径
+     htmlContent = htmlContent.replace(/\/proxy-static\/proxy-static\//g, '/proxy-static/');
+     
+
+     
+     // 返回修改后的页面内容
+     res.send(htmlContent);
+    
+  } catch (error) {
+    console.error('代理访问原平台失败:', error.message);
+    res.status(500).send(`
+      <h1>访问失败</h1>
+      <p>无法访问原平台企业列表页面</p>
+      <p>错误信息: ${error.message}</p>
+      <p><a href="/dashboard">返回仪表盘</a></p>
+    `);
+  }
+});
+
+// 路由：代理iframe页面
+app.get('/proxy-iframe/:page', async (req, res) => {
+  try {
+    const { page } = req.params;
+    
+    // 读取本地保存的cookie
+    let cookieData = {};
+    if (fs.existsSync(COOKIE_STORAGE_PATH)) {
+      cookieData = JSON.parse(fs.readFileSync(COOKIE_STORAGE_PATH, 'utf8'));
+    } else {
+      // 如果没有本地cookie文件，尝试使用请求中的cookie
+      cookieData = {
+        WEBYMSADMIN: req.cookies.WEBYMSADMIN,
+        language: req.cookies.language || 'zh'
+      };
+    }
+
+    if (!cookieData.WEBYMSADMIN) {
+      return res.status(401).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h3>认证失败</h3>
+            <p>未找到有效的认证信息，请先登录</p>
+            <a href="/login">前往登录</a>
+          </body>
+        </html>
+      `);
+    }
+
+    // 构建cookie字符串
+    const cookieString = `WEBYMSADMIN=${cookieData.WEBYMSADMIN}; language=${cookieData.language || 'zh'}`;
+    
+    // 构建目标URL
+    const targetUrl = `https://111.63.37.92:996/admin/deploy/netTag/${page}`;
+    
+    console.log('正在代理iframe页面:', targetUrl);
+    console.log('使用Cookie:', cookieString);
+    
+    // 代理访问目标页面
+    const response = await axios.get(targetUrl, {
+      headers: {
+        'Cookie': cookieString,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Referer': 'https://111.63.37.92:996/admin/',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      httpsAgent: httpsAgent
+    });
+
+    // 修改HTML内容，处理资源路径和跨域问题
+    let htmlContent = response.data;
+    
+    // 添加CORS和iframe友好的头部
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
+    
+    // 处理资源路径代理
+    htmlContent = htmlContent.replace(/\/proxy-static\/proxy-static\//g, '/proxy-static/');
+    htmlContent = htmlContent.replace(/(["\'`=])\/(?!proxy-static)([^"\'`\s>]*)/g, '$1/proxy-static/$2');
+    htmlContent = htmlContent.replace(/(["\'`])([a-zA-Z][^"\'`\s\/]*\.(js|css|json|png|jpg|gif|svg|ico|woff|woff2|ttf|eot|html))(?![^"\'`]*proxy-static)/g, '$1/proxy-static/$2');
+    htmlContent = htmlContent.replace(/\/proxy-static\/proxy-static\//g, '/proxy-static/');
+    
+    // 添加iframe适配脚本
+    const iframeScript = `
+      <script>
+        // 防止页面在iframe中跳转
+        if (window.top !== window.self) {
+          // 拦截页面跳转
+          const originalOpen = window.open;
+          window.open = function(url, target, features) {
+            if (target === '_blank' || !target) {
+              return originalOpen.call(this, url, '_blank', features);
+            }
+            return originalOpen.call(this, url, target, features);
+          };
+          
+          // 拦截表单提交
+          document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+              if (!form.target) {
+                form.target = '_parent';
+              }
+            });
+            
+            // 拦截链接点击
+            const links = document.querySelectorAll('a');
+            links.forEach(link => {
+              if (!link.target && link.href && !link.href.startsWith('#')) {
+                link.target = '_parent';
+              }
+            });
+          });
+        }
+        
+        // 自动调整iframe高度
+        function adjustIframeHeight() {
+          if (window.parent && window.parent !== window) {
+            const height = Math.max(
+              document.body.scrollHeight,
+              document.body.offsetHeight,
+              document.documentElement.clientHeight,
+              document.documentElement.scrollHeight,
+              document.documentElement.offsetHeight
+            );
+            window.parent.postMessage({
+              type: 'resize',
+              height: height
+            }, '*');
+          }
+        }
+        
+        // 页面加载完成后调整高度
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', adjustIframeHeight);
+        } else {
+          adjustIframeHeight();
+        }
+        
+        // 监听内容变化
+        const observer = new MutationObserver(adjustIframeHeight);
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true
+        });
+      </script>
+    `;
+    
+    // 在</body>前插入脚本
+    if (htmlContent.includes('</body>')) {
+      htmlContent = htmlContent.replace('</body>', iframeScript + '</body>');
+    } else {
+      htmlContent += iframeScript;
+    }
+    
+    // 设置响应头
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlContent);
+    
+  } catch (error) {
+    console.error('代理iframe页面失败:', error.message);
+    console.error('错误详情:', error.response ? {
+      status: error.response.status,
+      statusText: error.response.statusText,
+      data: error.response.data ? error.response.data.toString().substring(0, 500) : 'No data'
+    } : 'No response');
+    
+    // 如果是404错误，显示更友好的信息
+    if (error.response && error.response.status === 404) {
+      res.status(404).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h3>页面不存在</h3>
+            <p>目标页面 "${page}" 不存在或已被移动</p>
+            <p style="color: #666; font-size: 14px;">请求URL: ${targetUrl}</p>
+            <p style="color: #666; font-size: 12px;">可能的原因：</p>
+            <ul style="text-align: left; display: inline-block; color: #666; font-size: 12px;">
+              <li>页面路径已更改</li>
+              <li>需要特殊权限访问</li>
+              <li>页面暂时不可用</li>
+            </ul>
+            <button onclick="window.location.reload()">重试</button>
+          </body>
+        </html>
+      `);
+    } else {
+      res.status(500).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h3>加载失败</h3>
+            <p>无法加载页面内容</p>
+            <p style="color: #666; font-size: 14px;">错误信息: ${error.message}</p>
+            <p style="color: #666; font-size: 12px;">请求URL: ${targetUrl}</p>
+            <button onclick="window.location.reload()">重试</button>
+          </body>
+        </html>
+      `);
+    }
+  }
+});
+
+// 路由：代理静态资源（同时处理 /proxy-static 和 /admin 前缀）
+app.use([ '/proxy-static', '/admin' ], async (req, res) => {
+  try {
+    // 读取本地保存的cookie
+    let cookieData = {};
+    if (fs.existsSync(COOKIE_STORAGE_PATH)) {
+      cookieData = JSON.parse(fs.readFileSync(COOKIE_STORAGE_PATH, 'utf8'));
+    }
+
+    const cookieString = cookieData.WEBYMSADMIN ? 
+      `WEBYMSADMIN=${cookieData.WEBYMSADMIN}; language=${cookieData.language || 'zh'}` : '';
+
+    // 计算要代理到源站的原始路径
+    // - 当挂载在 /proxy-static 时：req.path 已经是以 /admin/... 开头
+    // - 当挂载在 /admin 时：需要把基路径和 path 连接回 /admin/...
+    const originalPath = req.baseUrl === '/proxy-static' ? req.path : `${req.baseUrl}${req.path}`;
+    const targetUrl = `https://111.63.37.92:996${originalPath}`;
+
+    console.log('代理静态资源:', targetUrl);
+
+    const response = await axios.get(targetUrl, {
+      headers: {
+        'Cookie': cookieString,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      httpsAgent: httpsAgent,
+      responseType: 'arraybuffer'
+    });
+
+    // 设置正确的Content-Type
+    if (response.headers['content-type']) {
+      res.set('Content-Type', response.headers['content-type']);
+    }
+
+    res.send(response.data);
+
+  } catch (error) {
+    console.error('代理静态资源失败:', error.message);
+    res.status(404).send('Resource not found');
+  }
 });
 
 
+
+// API列表存储路径
+const API_LIST_PATH = path.join(__dirname, 'api_list.json');
+
+// 读取API列表
+const loadApiList = () => {
+  try {
+    if (fs.existsSync(API_LIST_PATH)) {
+      const data = fs.readFileSync(API_LIST_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (error) {
+    console.error('读取API列表失败:', error.message);
+    return [];
+  }
+};
+
+// 保存API列表
+const saveApiList = (apiList) => {
+  try {
+    fs.writeFileSync(API_LIST_PATH, JSON.stringify(apiList, null, 2));
+    return true;
+  } catch (error) {
+    console.error('保存API列表失败:', error.message);
+    return false;
+  }
+};
+
+// 路由：HTTP测试工具页面
+app.get('/http_test', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'http_test.html'));
+});
+
+// 路由：执行HTTP测试请求
+app.post('/api/http_test', async (req, res) => {
+  const { method, url, encoding, headers, params } = req.body;
+  
+  try {
+    const startTime = Date.now();
+    
+    // 准备请求配置
+    const config = {
+      method: method.toLowerCase(),
+      url: url,
+      headers: {
+        ...headers,
+        // 自动添加本地cookie
+        'Cookie': req.headers.cookie || ''
+      },
+      httpsAgent: httpsAgent, // 忽略SSL证书验证
+      timeout: 30000, // 30秒超时
+      responseType: 'arraybuffer' // 获取原始数据以支持不同编码
+    };
+
+    // 处理请求参数
+    if (params && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
+      switch (params.type) {
+        case 'form':
+          config.data = new URLSearchParams(params.data).toString();
+          if (!config.headers['Content-Type']) {
+            config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+          }
+          break;
+        case 'batch':
+          config.data = params.data;
+          if (!config.headers['Content-Type']) {
+            config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+          }
+          break;
+        case 'json':
+          try {
+            config.data = JSON.parse(params.data);
+            if (!config.headers['Content-Type']) {
+              config.headers['Content-Type'] = 'application/json';
+            }
+          } catch (e) {
+            return res.json({ success: false, error: 'JSON格式错误: ' + e.message });
+          }
+          break;
+        case 'text':
+          config.data = params.data;
+          if (!config.headers['Content-Type']) {
+            config.headers['Content-Type'] = 'text/plain';
+          }
+          break;
+      }
+    } else if (params && params.type === 'form' && method.toLowerCase() === 'get') {
+      // GET请求参数添加到URL
+      const urlObj = new URL(url);
+      Object.entries(params.data).forEach(([key, value]) => {
+        urlObj.searchParams.append(key, value);
+      });
+      config.url = urlObj.toString();
+    }
+
+    // 发送请求
+    const response = await axios(config);
+    const endTime = Date.now();
+    
+    // 处理响应编码
+    let responseBody;
+    const buffer = Buffer.from(response.data);
+    
+    try {
+      switch (encoding.toLowerCase()) {
+        case 'gbk':
+        case 'gb2312':
+        case 'gb18030':
+          const iconv = require('iconv-lite');
+          responseBody = iconv.decode(buffer, encoding);
+          break;
+        case 'utf-8':
+        default:
+          responseBody = buffer.toString('utf8');
+          break;
+      }
+    } catch (encodingError) {
+      responseBody = buffer.toString('utf8'); // 回退到UTF-8
+    }
+
+    // 尝试格式化JSON响应
+    try {
+      const jsonData = JSON.parse(responseBody);
+      responseBody = JSON.stringify(jsonData, null, 2);
+    } catch (e) {
+      // 不是JSON格式，保持原样
+    }
+
+    // 获取服务器IP
+    let serverIP = 'unknown';
+    try {
+      const urlObj = new URL(url);
+      const dns = require('dns');
+      serverIP = await new Promise((resolve) => {
+        dns.lookup(urlObj.hostname, (err, address) => {
+          resolve(err ? 'unknown' : address);
+        });
+      });
+    } catch (e) {
+      // IP获取失败，使用默认值
+    }
+
+    res.json({
+      success: true,
+      data: {
+        responseBody: responseBody,
+        requestHeaders: config.headers,
+        responseHeaders: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+        duration: endTime - startTime,
+        ip: serverIP
+      }
+    });
+
+  } catch (error) {
+    let errorMessage = error.message;
+    let status = 0;
+    let statusText = 'Error';
+
+    if (error.response) {
+      // 服务器响应了错误状态码
+      status = error.response.status;
+      statusText = error.response.statusText;
+      
+      try {
+        const buffer = Buffer.from(error.response.data);
+        let errorBody;
+        
+        switch (encoding.toLowerCase()) {
+          case 'gbk':
+          case 'gb2312':
+          case 'gb18030':
+            const iconv = require('iconv-lite');
+            errorBody = iconv.decode(buffer, encoding);
+            break;
+          default:
+            errorBody = buffer.toString('utf8');
+            break;
+        }
+        
+        errorMessage = `${status} ${statusText}\n\n${errorBody}`;
+      } catch (e) {
+        errorMessage = `${status} ${statusText}`;
+      }
+    } else if (error.request) {
+      // 请求发送了但没有收到响应
+      errorMessage = '请求超时或网络错误';
+    }
+
+    res.json({
+      success: false,
+      error: errorMessage,
+      status: status,
+      statusText: statusText
+    });
+  }
+});
+
+// 路由：保存API配置
+app.post('/api/save_api', (req, res) => {
+  try {
+    const apiConfig = req.body;
+    const apiList = loadApiList();
+    
+    // 检查是否已存在同名API
+    const existingIndex = apiList.findIndex(api => api.name === apiConfig.name);
+    
+    if (existingIndex >= 0) {
+      // 更新现有API
+      apiList[existingIndex] = apiConfig;
+    } else {
+      // 添加新API
+      apiList.push(apiConfig);
+    }
+    
+    if (saveApiList(apiList)) {
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, error: '保存失败' });
+    }
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// 路由：加载API列表
+app.get('/api/load_apis', (req, res) => {
+  try {
+    const apiList = loadApiList();
+    res.json({ success: true, data: apiList });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// 路由：删除API配置
+app.post('/api/delete_api', (req, res) => {
+  try {
+    const { index } = req.body;
+    const apiList = loadApiList();
+    
+    if (index >= 0 && index < apiList.length) {
+      apiList.splice(index, 1);
+      if (saveApiList(apiList)) {
+        res.json({ success: true });
+      } else {
+        res.json({ success: false, error: '保存失败' });
+      }
+    } else {
+      res.json({ success: false, error: '无效的索引' });
+    }
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// 路由：清空API列表
+app.post('/api/clear_apis', (req, res) => {
+  try {
+    if (saveApiList([])) {
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, error: '清空失败' });
+    }
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
 
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
   console.log(`请访问 http://localhost:${PORT}/login 进行登录`);
+  console.log(`请访问 http://localhost:${PORT}/http_test 使用HTTP测试工具`);
 });

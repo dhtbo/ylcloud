@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP API 测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .form-section {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .form-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .url-input {
+            flex: 1;
+        }
+        .method-select {
+            width: 120px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .response-area {
+            min-height: 200px;
+            background-color: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 2px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .param-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .param-row input {
+            flex: 1;
+        }
+        .param-row button {
+            width: 80px;
+            padding: 5px;
+            font-size: 12px;
+        }
+        .api-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .api-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .api-item:hover {
+            background-color: #f8f9fa;
+        }
+        .api-method {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: white;
+            font-size: 12px;
+        }
+        .method-GET { background-color: #28a745; }
+        .method-POST { background-color: #007bff; }
+        .method-PUT { background-color: #ffc107; color: #000; }
+        .method-DELETE { background-color: #dc3545; }
+        .method-PATCH { background-color: #6f42c1; }
+        .method-HEAD { background-color: #6c757d; }
+        .method-OPTIONS { background-color: #17a2b8; }
+        .method-TRACE { background-color: #fd7e14; }
+        .response-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status-success { color: #28a745; font-weight: bold; }
+        .status-error { color: #dc3545; font-weight: bold; }
+        .encoding-select {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HTTP API 测试工具</h1>
+            <p>支持多种HTTP方法、编码格式和参数类型的在线API测试</p>
+        </div>
+        
+        <div class="content">
+            <!-- API存档管理 -->
+            <div class="form-section">
+                <h3>API 存档管理</h3>
+                <div class="form-row">
+                    <input type="text" id="apiName" placeholder="API名称" style="width: 200px;">
+                    <button onclick="saveCurrentApi()">保存当前API</button>
+                    <button class="btn-secondary" onclick="loadApiList()">刷新列表</button>
+                    <button class="btn-danger" onclick="clearApiList()">清空存档</button>
+                </div>
+                <div class="api-list" id="apiList"></div>
+            </div>
+
+            <!-- 请求配置 -->
+            <div class="form-section">
+                <h3>请求配置</h3>
+                <div class="form-group">
+                    <div class="form-row">
+                        <select id="method" class="method-select">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="PATCH">PATCH</option>
+                            <option value="HEAD">HEAD</option>
+                            <option value="OPTIONS">OPTIONS</option>
+                            <option value="TRACE">TRACE</option>
+                        </select>
+                        <input type="text" id="url" class="url-input" placeholder="请输入API地址 (如: https://api.example.com/users)" value="">
+                        <select id="encoding" class="encoding-select">
+                            <option value="utf-8">UTF-8</option>
+                            <option value="gbk">GBK</option>
+                            <option value="gb2312">GB2312</option>
+                            <option value="gb18030">GB18030</option>
+                        </select>
+                        <button onclick="sendRequest()">发送请求</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 请求头配置 -->
+            <div class="form-section">
+                <h3>请求头 (Headers)</h3>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('headers', 'single')">单个添加</div>
+                    <div class="tab" onclick="switchTab('headers', 'batch')">批量添加</div>
+                    <div class="tab" onclick="switchTab('headers', 'browser')">浏览器复制</div>
+                </div>
+                
+                <div id="headers-single" class="tab-content active">
+                    <div id="headersList">
+                        <div class="param-row">
+                            <input type="text" placeholder="Header名称" class="header-key">
+                            <input type="text" placeholder="Header值" class="header-value">
+                            <button class="btn-danger" onclick="removeHeaderRow(this)">删除</button>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="addHeaderRow()">添加Header</button>
+                </div>
+                
+                <div id="headers-batch" class="tab-content">
+                    <textarea id="headersBatch" placeholder='JSON格式批量添加，如：&#10;{&#10;  "Content-Type": "application/json",&#10;  "Authorization": "Bearer token123"&#10;}'></textarea>
+                    <button onclick="parseHeadersBatch()">解析JSON Headers</button>
+                </div>
+                
+                <div id="headers-browser" class="tab-content">
+                    <textarea id="headersBrowser" placeholder="直接从浏览器开发者工具或抓包工具复制Header信息：&#10;Content-Type: application/json&#10;Authorization: Bearer token123&#10;User-Agent: Mozilla/5.0..."></textarea>
+                    <button onclick="parseHeadersBrowser()">解析浏览器Headers</button>
+                </div>
+            </div>
+
+            <!-- 请求参数配置 -->
+            <div class="form-section">
+                <h3>请求参数</h3>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('params', 'form')">Form表单</div>
+                    <div class="tab" onclick="switchTab('params', 'batch')">批量参数</div>
+                    <div class="tab" onclick="switchTab('params', 'json')">JSON</div>
+                    <div class="tab" onclick="switchTab('params', 'text')">文本</div>
+                </div>
+                
+                <div id="params-form" class="tab-content active">
+                    <div id="paramsList">
+                        <div class="param-row">
+                            <input type="text" placeholder="参数名" class="param-key">
+                            <input type="text" placeholder="参数值" class="param-value">
+                            <button class="btn-danger" onclick="removeParamRow(this)">删除</button>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="addParamRow()">添加参数</button>
+                </div>
+                
+                <div id="params-batch" class="tab-content">
+                    <textarea id="paramsBatch" placeholder="批量参数格式 (如: a=1&b=2&c=hello world)"></textarea>
+                </div>
+                
+                <div id="params-json" class="tab-content">
+                    <textarea id="paramsJson" placeholder='JSON格式参数，如：&#10;{&#10;  "name": "sojson",&#10;  "age": 25,&#10;  "city": "北京"&#10;}'></textarea>
+                </div>
+                
+                <div id="params-text" class="tab-content">
+                    <textarea id="paramsText" placeholder="任意文本内容"></textarea>
+                </div>
+            </div>
+
+            <!-- 响应结果 -->
+            <div class="form-section">
+                <h3>响应结果</h3>
+                <div id="responseInfo" class="response-info" style="display: none;"></div>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('response', 'body')">Response Body</div>
+                    <div class="tab" onclick="switchTab('response', 'request-headers')">Request Headers</div>
+                    <div class="tab" onclick="switchTab('response', 'response-headers')">Response Headers</div>
+                </div>
+                
+                <div id="response-body" class="tab-content active">
+                    <textarea id="responseBody" class="response-area" readonly placeholder="响应内容将显示在这里..."></textarea>
+                </div>
+                
+                <div id="response-request-headers" class="tab-content">
+                    <textarea id="requestHeaders" class="response-area" readonly placeholder="请求头信息将显示在这里..."></textarea>
+                </div>
+                
+                <div id="response-response-headers" class="tab-content">
+                    <textarea id="responseHeaders" class="response-area" readonly placeholder="响应头信息将显示在这里..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentApiList = [];
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadApiList();
+            // 设置默认Content-Type
+            updateContentType();
+        });
+
+        // 标签页切换
+        function switchTab(section, tabName) {
+            // 隐藏所有该section的tab-content
+            const contents = document.querySelectorAll(`#${section}-${tabName}`).forEach(content => {
+                content.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            });
+            
+            // 移除所有该section的tab active状态
+            const tabs = document.querySelector(`#${section}-${tabName}`).parentElement.parentElement.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // 激活当前tab
+            event.target.classList.add('active');
+            document.getElementById(`${section}-${tabName}`).classList.add('active');
+            
+            // 如果是参数tab，更新Content-Type
+            if (section === 'params') {
+                updateContentType();
+            }
+        }
+
+        // 根据参数类型自动设置Content-Type
+        function updateContentType() {
+            const activeParamTab = document.querySelector('#params-form').classList.contains('active') ? 'form' :
+                                 document.querySelector('#params-batch').classList.contains('active') ? 'batch' :
+                                 document.querySelector('#params-json').classList.contains('active') ? 'json' : 'text';
+            
+            // 查找Content-Type header
+            const headerKeys = document.querySelectorAll('.header-key');
+            let contentTypeFound = false;
+            
+            headerKeys.forEach(input => {
+                if (input.value.toLowerCase() === 'content-type') {
+                    contentTypeFound = true;
+                    const valueInput = input.parentElement.querySelector('.header-value');
+                    
+                    switch(activeParamTab) {
+                        case 'form':
+                        case 'batch':
+                            valueInput.value = 'application/x-www-form-urlencoded';
+                            break;
+                        case 'json':
+                            valueInput.value = 'application/json';
+                            break;
+                        case 'text':
+                            valueInput.value = 'text/plain';
+                            break;
+                    }
+                }
+            });
+            
+            // 如果没有Content-Type，添加一个
+            if (!contentTypeFound && activeParamTab !== 'form') {
+                addHeaderRow();
+                const lastHeaderRow = document.querySelector('#headersList .param-row:last-child');
+                const keyInput = lastHeaderRow.querySelector('.header-key');
+                const valueInput = lastHeaderRow.querySelector('.header-value');
+                
+                keyInput.value = 'Content-Type';
+                switch(activeParamTab) {
+                    case 'batch':
+                        valueInput.value = 'application/x-www-form-urlencoded';
+                        break;
+                    case 'json':
+                        valueInput.value = 'application/json';
+                        break;
+                    case 'text':
+                        valueInput.value = 'text/plain';
+                        break;
+                }
+            }
+        }
+
+        // 添加Header行
+        function addHeaderRow() {
+            const headersList = document.getElementById('headersList');
+            const newRow = document.createElement('div');
+            newRow.className = 'param-row';
+            newRow.innerHTML = `
+                <input type="text" placeholder="Header名称" class="header-key">
+                <input type="text" placeholder="Header值" class="header-value">
+                <button class="btn-danger" onclick="removeHeaderRow(this)">删除</button>
+            `;
+            headersList.appendChild(newRow);
+        }
+
+        // 删除Header行
+        function removeHeaderRow(button) {
+            button.parentElement.remove();
+        }
+
+        // 添加参数行
+        function addParamRow() {
+            const paramsList = document.getElementById('paramsList');
+            const newRow = document.createElement('div');
+            newRow.className = 'param-row';
+            newRow.innerHTML = `
+                <input type="text" placeholder="参数名" class="param-key">
+                <input type="text" placeholder="参数值" class="param-value">
+                <button class="btn-danger" onclick="removeParamRow(this)">删除</button>
+            `;
+            paramsList.appendChild(newRow);
+        }
+
+        // 删除参数行
+        function removeParamRow(button) {
+            button.parentElement.remove();
+        }
+
+        // 解析批量Headers (JSON格式)
+        function parseHeadersBatch() {
+            try {
+                const batchText = document.getElementById('headersBatch').value;
+                const headers = JSON.parse(batchText);
+                
+                // 清空现有headers
+                document.getElementById('headersList').innerHTML = '';
+                
+                // 添加解析的headers
+                Object.entries(headers).forEach(([key, value]) => {
+                    addHeaderRow();
+                    const lastRow = document.querySelector('#headersList .param-row:last-child');
+                    lastRow.querySelector('.header-key').value = key;
+                    lastRow.querySelector('.header-value').value = value;
+                });
+                
+                // 切换到单个添加tab
+                switchTab('headers', 'single');
+                alert('Headers解析成功！');
+            } catch (error) {
+                alert('JSON格式错误：' + error.message);
+            }
+        }
+
+        // 解析浏览器Headers
+        function parseHeadersBrowser() {
+            const browserText = document.getElementById('headersBrowser').value;
+            const lines = browserText.split('\n').filter(line => line.trim());
+            
+            // 清空现有headers
+            document.getElementById('headersList').innerHTML = '';
+            
+            lines.forEach(line => {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > 0) {
+                    const key = line.substring(0, colonIndex).trim();
+                    const value = line.substring(colonIndex + 1).trim();
+                    
+                    addHeaderRow();
+                    const lastRow = document.querySelector('#headersList .param-row:last-child');
+                    lastRow.querySelector('.header-key').value = key;
+                    lastRow.querySelector('.header-value').value = value;
+                }
+            });
+            
+            // 切换到单个添加tab
+            switchTab('headers', 'single');
+            alert(`解析成功！添加了 ${lines.length} 个Headers`);
+        }
+
+        // 收集Headers
+        function collectHeaders() {
+            const headers = {};
+            const headerRows = document.querySelectorAll('#headersList .param-row');
+            
+            headerRows.forEach(row => {
+                const key = row.querySelector('.header-key').value.trim();
+                const value = row.querySelector('.header-value').value.trim();
+                if (key && value) {
+                    headers[key] = value;
+                }
+            });
+            
+            return headers;
+        }
+
+        // 收集参数
+        function collectParams() {
+            const activeParamTab = document.querySelector('.tab-content.active[id^="params-"]').id;
+            
+            switch(activeParamTab) {
+                case 'params-form':
+                    const formData = {};
+                    const paramRows = document.querySelectorAll('#paramsList .param-row');
+                    paramRows.forEach(row => {
+                        const key = row.querySelector('.param-key').value.trim();
+                        const value = row.querySelector('.param-value').value.trim();
+                        if (key && value) {
+                            formData[key] = value;
+                        }
+                    });
+                    return { type: 'form', data: formData };
+                    
+                case 'params-batch':
+                    return { type: 'batch', data: document.getElementById('paramsBatch').value };
+                    
+                case 'params-json':
+                    return { type: 'json', data: document.getElementById('paramsJson').value };
+                    
+                case 'params-text':
+                    return { type: 'text', data: document.getElementById('paramsText').value };
+                    
+                default:
+                    return { type: 'form', data: {} };
+            }
+        }
+
+        // 发送请求
+        async function sendRequest() {
+            const method = document.getElementById('method').value;
+            const url = document.getElementById('url').value.trim();
+            const encoding = document.getElementById('encoding').value;
+            
+            if (!url) {
+                alert('请输入API地址');
+                return;
+            }
+            
+            const headers = collectHeaders();
+            const params = collectParams();
+            
+            const requestData = {
+                method,
+                url,
+                encoding,
+                headers,
+                params
+            };
+            
+            // 显示加载状态
+            document.getElementById('responseInfo').style.display = 'block';
+            document.getElementById('responseInfo').innerHTML = '<span style="color: #007bff;">正在发送请求...</span>';
+            
+            try {
+                const response = await fetch('/api/http_test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayResponse(result.data);
+                } else {
+                    displayError(result.error);
+                }
+            } catch (error) {
+                displayError('请求失败: ' + error.message);
+            }
+        }
+
+        // 显示响应结果
+        function displayResponse(data) {
+            const { responseBody, requestHeaders, responseHeaders, status, statusText, duration, ip } = data;
+            
+            // 显示响应信息
+            const statusClass = status >= 200 && status < 300 ? 'status-success' : 'status-error';
+            document.getElementById('responseInfo').innerHTML = `
+                <div>状态码: <span class="${statusClass}">${status} ${statusText}</span></div>
+                <div>请求时间: ${duration}ms</div>
+                <div>服务器IP: ${ip || '未知'}</div>
+            `;
+            
+            // 显示响应内容
+            document.getElementById('responseBody').value = responseBody;
+            document.getElementById('requestHeaders').value = JSON.stringify(requestHeaders, null, 2);
+            document.getElementById('responseHeaders').value = JSON.stringify(responseHeaders, null, 2);
+        }
+
+        // 显示错误
+        function displayError(error) {
+            document.getElementById('responseInfo').innerHTML = `<span class="status-error">请求失败: ${error}</span>`;
+            document.getElementById('responseBody').value = '';
+            document.getElementById('requestHeaders').value = '';
+            document.getElementById('responseHeaders').value = '';
+        }
+
+        // 保存当前API配置
+        async function saveCurrentApi() {
+            const apiName = document.getElementById('apiName').value.trim();
+            if (!apiName) {
+                alert('请输入API名称');
+                return;
+            }
+            
+            const apiConfig = {
+                name: apiName,
+                method: document.getElementById('method').value,
+                url: document.getElementById('url').value,
+                encoding: document.getElementById('encoding').value,
+                headers: collectHeaders(),
+                params: collectParams(),
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                const response = await fetch('/api/save_api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(apiConfig)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('API配置保存成功！');
+                    document.getElementById('apiName').value = '';
+                    loadApiList();
+                } else {
+                    alert('保存失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        }
+
+        // 加载API列表
+        async function loadApiList() {
+            try {
+                const response = await fetch('/api/load_apis');
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentApiList = result.data;
+                    displayApiList();
+                } else {
+                    console.error('加载API列表失败:', result.error);
+                }
+            } catch (error) {
+                console.error('加载API列表失败:', error);
+            }
+        }
+
+        // 显示API列表
+        function displayApiList() {
+            const apiListElement = document.getElementById('apiList');
+            
+            if (currentApiList.length === 0) {
+                apiListElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">暂无保存的API</div>';
+                return;
+            }
+            
+            apiListElement.innerHTML = currentApiList.map((api, index) => `
+                <div class="api-item" onclick="loadApi(${index})">
+                    <div>
+                        <span class="api-method method-${api.method}">${api.method}</span>
+                        <strong>${api.name}</strong>
+                        <div style="font-size: 12px; color: #666; margin-top: 2px;">${api.url}</div>
+                    </div>
+                    <button class="btn-danger" onclick="deleteApi(${index}, event)" style="padding: 2px 6px; font-size: 11px;">删除</button>
+                </div>
+            `).join('');
+        }
+
+        // 加载API配置
+        function loadApi(index) {
+            const api = currentApiList[index];
+            
+            // 设置基本信息
+            document.getElementById('method').value = api.method;
+            document.getElementById('url').value = api.url;
+            document.getElementById('encoding').value = api.encoding || 'utf-8';
+            
+            // 设置Headers
+            document.getElementById('headersList').innerHTML = '';
+            Object.entries(api.headers || {}).forEach(([key, value]) => {
+                addHeaderRow();
+                const lastRow = document.querySelector('#headersList .param-row:last-child');
+                lastRow.querySelector('.header-key').value = key;
+                lastRow.querySelector('.header-value').value = value;
+            });
+            
+            // 设置参数
+            const params = api.params || { type: 'form', data: {} };
+            switch(params.type) {
+                case 'form':
+                    document.getElementById('paramsList').innerHTML = '';
+                    Object.entries(params.data || {}).forEach(([key, value]) => {
+                        addParamRow();
+                        const lastRow = document.querySelector('#paramsList .param-row:last-child');
+                        lastRow.querySelector('.param-key').value = key;
+                        lastRow.querySelector('.param-value').value = value;
+                    });
+                    switchTab('params', 'form');
+                    break;
+                case 'batch':
+                    document.getElementById('paramsBatch').value = params.data || '';
+                    switchTab('params', 'batch');
+                    break;
+                case 'json':
+                    document.getElementById('paramsJson').value = params.data || '';
+                    switchTab('params', 'json');
+                    break;
+                case 'text':
+                    document.getElementById('paramsText').value = params.data || '';
+                    switchTab('params', 'text');
+                    break;
+            }
+            
+            alert('API配置加载成功！');
+        }
+
+        // 删除API
+        async function deleteApi(index, event) {
+            event.stopPropagation();
+            
+            if (!confirm('确定要删除这个API配置吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/delete_api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ index })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    loadApiList();
+                } else {
+                    alert('删除失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 清空API列表
+        async function clearApiList() {
+            if (!confirm('确定要清空所有API配置吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/clear_apis', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    loadApiList();
+                    alert('API列表已清空');
+                } else {
+                    alert('清空失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('清空失败: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
